@@ -1617,8 +1617,6 @@ uvc_error_t uvc_parse_vs(uvc_device_t *dev, uvc_device_info_t *info,
 	case UVC_VS_INPUT_HEADER:
 		ret = uvc_parse_vs_input_header(stream_if, block, block_size);
 		break;
-//	case UVC_VS_STILL_IMAGE_FRAME:	// FIXME unsupported now
-//		break;
 	case UVC_VS_FORMAT_UNCOMPRESSED:
 		ret = uvc_parse_vs_format_uncompressed(stream_if, block, block_size);
 		break;
@@ -1635,10 +1633,7 @@ uvc_error_t uvc_parse_vs(uvc_device_t *dev, uvc_device_info_t *info,
 	case UVC_VS_FRAME_FRAME_BASED:
 		ret = uvc_parse_vs_frame_frame(stream_if, block, block_size );
 		break;
-//	case UVC_VS_COLORFORMAT:	// FIXME unsupported now
-//		break;
 	default:
-		/** @todo handle JPEG and maybe still frames or even DV... */
 		LOGV("unsupported descriptor_subtype(0x%02x)", descriptor_subtype);
 		break;
 	}
