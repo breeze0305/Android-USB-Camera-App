@@ -53,6 +53,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Rewrote the EGL environment helper with explicit display/config/context/surface ownership checks and safer surface replacement cleanup.
 - Rewrote the camera FBO render helpers with project-owned matrix/FBO management and explicit framebuffer cleanup on render release.
 - Rewrote the shared GLES render base with project-owned shader setup, fullscreen-quad drawing, texture helpers, and correct uniform lookup for `uTextureSampler`.
+- Replaced the bundled XLog wrapper with a small project-owned Android Log adapter and removed the XLog dependency so camera logs are no longer written to app files.
 
 ## Bundled Native Components
 
