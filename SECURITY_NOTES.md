@@ -46,6 +46,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Narrowed the active camera activity base toward this app's TextureView preview flow, removed unused generic container branches, and added a guard for null USB permission requests.
 - Consolidated the active multi-camera USB event dispatch path behind a project-owned filter helper to keep attach/connect/detach/cancel handling consistent.
 - Rewrote `MultiCameraClient` as a project-owned implementation while preserving the app-facing API, with clearer preview start/stop helpers, OpenGL setup, size waiting, and preview-size selection.
+- Rewrote the active UVC camera adapter with a project-owned open/configure/start flow while preserving permission checks, preview-size fallback, and explicit error callbacks.
 
 ## Bundled Native Components
 
