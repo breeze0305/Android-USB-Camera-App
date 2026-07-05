@@ -56,6 +56,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Replaced the bundled XLog wrapper with a small project-owned Android Log adapter and removed the XLog dependency so camera logs are no longer written to app files.
 - Reduced USB permission logging noise by removing a legacy tag string and keeping successful permission receiver details behind the debug flag.
 - Narrowed remaining helper exception handling for raw shader resources and preview `Surface` creation to their specific Android failure types.
+- Rewrote the active USB `DeviceFilter` helper with project-owned XML parsing and matching logic while redacting manufacturer/product/serial values from `toString()`.
 
 ## Bundled Native Components
 
