@@ -5,10 +5,6 @@ import android.content.Context
 import android.opengl.GLES20
 import javax.microedition.khronos.opengles.GL10
 
-/** opengl es tool
- *
- * @author Created by jiangdg on 2023/1/17
- */
 object OpenGLUtils {
     private const val TAG = "OpenGLUtils"
 
@@ -40,8 +36,7 @@ object OpenGLUtils {
     fun checkGlError(op: String) {
         val error = GLES20.glGetError()
         if (error != GLES20.GL_NO_ERROR) {
-            val msg = op + ": glError 0x" + Integer.toHexString(error) + ":" + glGetErrorStr(error)
-            Logger.e(TAG, msg)
+            Logger.e(TAG, "$op: glError 0x${Integer.toHexString(error)}:${glGetErrorStr(error)}")
         }
     }
 }

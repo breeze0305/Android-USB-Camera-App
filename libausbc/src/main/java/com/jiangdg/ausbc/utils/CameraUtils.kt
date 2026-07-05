@@ -13,24 +13,22 @@ object CameraUtils {
     fun isUsbCamera(device: UsbDevice?): Boolean {
         return when (device?.deviceClass) {
             UsbConstants.USB_CLASS_VIDEO -> true
-            UsbConstants.USB_CLASS_MISC -> {
+            UsbConstants.USB_CLASS_MISC ->
                 (0 until device.interfaceCount).any { index ->
                     device.getInterface(index).interfaceClass == UsbConstants.USB_CLASS_VIDEO
                 }
-            }
             else -> false
         }
     }
 
     fun isFilterDevice(context: Context?, usbDevice: UsbDevice?): Boolean {
+        if (context == null || usbDevice == null) return false
         return DeviceFilter.getDeviceFilters(context, R.xml.default_device_filter).any { devFilter ->
-            devFilter.mProductId == usbDevice?.productId &&
+            devFilter.mProductId == usbDevice.productId &&
                 devFilter.mVendorId == usbDevice.vendorId
         }
     }
 
-    fun hasCameraPermission(ctx: Context): Boolean {
-        return ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) ==
-            PackageManager.PERMISSION_GRANTED
-    }
+    fun hasCameraPermission(ctx: Context): Boolean =
+        ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 }
