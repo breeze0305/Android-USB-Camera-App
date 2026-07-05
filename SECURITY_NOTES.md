@@ -42,6 +42,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Rewrote the active aspect-ratio preview widget and interface with a small project-owned implementation, including safer null handling for missing `SurfaceTexture` instances.
 - Rewrote small active AUSBC callback and camera-request data APIs as concise project-owned Kotlin definitions while preserving the existing public method names used by the app.
 - Reworked thin active AUSBC utility wrappers and added explicit null handling around USB device filter checks.
+- Replaced the legacy AQS-based `SettableFuture` helper with a small project-owned synchronized implementation used by camera/render wait paths.
 
 ## Bundled Native Components
 
