@@ -353,13 +353,8 @@ class MultiCameraClient(
         }
 
         private fun cancelSizeWait() {
-            try {
-                mSizeChangedFuture?.cancel(true)
-            } catch (e: RuntimeException) {
-                Logger.w(TAG, "cancel surface measure wait failed", e)
-            } finally {
-                mSizeChangedFuture = null
-            }
+            mSizeChangedFuture?.cancel(true)
+            mSizeChangedFuture = null
         }
     }
 

@@ -102,7 +102,7 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
                     setUsbControlBlock(null)
                 }
                 mRequestPermission.set(false)
-                cancelCurrentCamera("camera detached")
+                cancelCurrentCamera()
             }
 
             override fun onConnectDev(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
@@ -111,7 +111,7 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
                 mCameraMap[device.deviceId]?.apply {
                     setUsbControlBlock(ctrlBlock)
                 }?.also { camera ->
-                    cancelCurrentCamera("camera connected")
+                    cancelCurrentCamera()
                     mCurrentCamera = SettableFuture()
                     mCurrentCamera?.set(camera)
                     openCamera(mCameraView)
@@ -126,7 +126,7 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
 
             override fun onCancelDev(device: UsbDevice?) {
                 mRequestPermission.set(false)
-                cancelCurrentCamera("permission cancelled")
+                cancelCurrentCamera()
             }
         })
         mCameraClient?.register()
@@ -217,14 +217,9 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
         requestPermission(usbDevice)
     }
 
-    private fun cancelCurrentCamera(reason: String) {
-        try {
-            mCurrentCamera?.cancel(true)
-        } catch (e: RuntimeException) {
-            Logger.w(TAG, "cancel current camera failed: $reason", e)
-        } finally {
-            mCurrentCamera = null
-        }
+    private fun cancelCurrentCamera() {
+        mCurrentCamera?.cancel(true)
+        mCurrentCamera = null
     }
 
     protected fun isCameraOpened() = getCurrentCamera()?.isCameraOpened()  ?: false
