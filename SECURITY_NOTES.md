@@ -61,6 +61,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Rewrote the Java `UVCCamera` wrapper around the existing JNI bridge with project-owned open/preview-size/supported-size/surface lifecycle handling.
 - Narrowed USB permission request failure handling to Android security/argument exceptions and removed localized exception text from the log message.
 - Replaced the remaining small libuvc Java utility helpers (`BuildCheck` and `HandlerThreadHandler`) with project-owned minimal implementations used by USB monitoring.
+- Cleaned active `USBMonitor` metadata by removing legacy header text, using this app's permission action namespace, and replacing the old USB string decoding exception path with a project-owned helper.
 
 ## Bundled Native Components
 

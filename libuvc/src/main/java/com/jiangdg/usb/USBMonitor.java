@@ -1,26 +1,3 @@
-/*
- *  UVCCamera
- *  library and sample to access to UVC web camera on non-rooted Android device
- *
- * Copyright (c) 2014-2017 saki t_saki@serenegiant.com
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- *
- *  All files in the folder are under this Apache License, Version 2.0.
- *  Files in the libjpeg-turbo, libusb, libuvc, rapidjson folder
- *  may have a different license, see the respective files.
- */
-
 package com.jiangdg.usb;
 
 import android.annotation.SuppressLint;
@@ -45,10 +22,9 @@ import com.jiangdg.utils.BuildCheck;
 import com.jiangdg.utils.HandlerThreadHandler;
 import com.jiangdg.utils.XLogWrapper;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -61,7 +37,7 @@ public final class USBMonitor {
 	public static boolean DEBUG = false;
 	private static final String TAG = "USBMonitor";
 
-	private static final String ACTION_USB_PERMISSION_BASE = "com.serenegiant.USB_PERMISSION.";
+	private static final String ACTION_USB_PERMISSION_BASE = "com.breeze.usbcamera.USB_PERMISSION.";
 	private final String ACTION_USB_PERMISSION = ACTION_USB_PERMISSION_BASE + hashCode();
 
 	public static final String ACTION_USB_DEVICE_ATTACHED = "android.hardware.usb.action.USB_DEVICE_ATTACHED";
@@ -545,7 +521,7 @@ public final class USBMonitor {
 						ctrlBlock.close();
 					}
 					mDeviceCounts = 0;
-					processDettach(device);
+					processDetach(device);
 				}
 			}
 		}
@@ -647,9 +623,9 @@ public final class USBMonitor {
 		}
 	}
 
-	private void processDettach(final UsbDevice device) {
+	private void processDetach(final UsbDevice device) {
 		if (destroyed) return;
-		if (DEBUG) XLogWrapper.v(TAG, "processDettach:");
+		if (DEBUG) XLogWrapper.v(TAG, "processDetach:");
 		if (mOnDeviceConnectListener != null) {
 			mAsyncHandler.post(new Runnable() {
 				@Override
@@ -888,19 +864,19 @@ public final class USBMonitor {
 				(USB_DT_STRING << 8) | id, languages[i], work, 256, 0);
 			if ((ret > 2) && (work[0] == ret) && (work[1] == USB_DT_STRING)) {
 				// skip first two bytes(bLength & bDescriptorType), and copy the rest to the string
-				try {
-					result = new String(work, 2, ret - 2, "UTF-16LE");
-					if (!"Љ".equals(result)) {	// 変なゴミが返ってくる時がある
-						break;
-					} else {
-						result = null;
-					}
-				} catch (final UnsupportedEncodingException e) {
-					// ignore
+				result = new String(work, 2, ret - 2, StandardCharsets.UTF_16LE);
+				if (isPlaceholderUsbString(result)) {
+					result = null;
+				} else {
+					break;
 				}
 			}
 		}
 		return result;
+	}
+
+	private static boolean isPlaceholderUsbString(final String value) {
+		return value != null && value.length() == 1 && value.charAt(0) == 0x0409;
 	}
 
 	/**
