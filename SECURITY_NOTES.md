@@ -43,6 +43,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Rewrote small active AUSBC callback and camera-request data APIs as concise project-owned Kotlin definitions while preserving the existing public method names used by the app.
 - Reworked thin active AUSBC utility wrappers and added explicit null handling around USB device filter checks.
 - Replaced the legacy AQS-based `SettableFuture` helper with a small project-owned synchronized implementation used by camera/render wait paths.
+- Narrowed the active camera activity base toward this app's TextureView preview flow, removed unused generic container branches, and added a guard for null USB permission requests.
 
 ## Bundled Native Components
 

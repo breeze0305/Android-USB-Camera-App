@@ -1,34 +1,22 @@
-/*
- * Copyright 2017-2023 Jiangdg
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.jiangdg.ausbc.base
 
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
-import android.view.*
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.TextureView
+import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.RelativeLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.jiangdg.ausbc.MultiCameraClient
+import com.jiangdg.ausbc.camera.CameraUVC
 import com.jiangdg.ausbc.camera.bean.CameraRequest
 import com.jiangdg.ausbc.camera.bean.PreviewSize
-import com.jiangdg.ausbc.callback.*
-import com.jiangdg.ausbc.camera.CameraUVC
+import com.jiangdg.ausbc.callback.ICameraStateCallBack
+import com.jiangdg.ausbc.callback.IDeviceConnectCallBack
 import com.jiangdg.ausbc.render.env.RotateType
 import com.jiangdg.ausbc.utils.Logger
 import com.jiangdg.ausbc.utils.SettableFuture
@@ -40,11 +28,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 
-
-/** Base activity for one UVC camera.
- *
- * @author Created by jiangdg on 2023/2/3
- */
 abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
     private var mCameraView: IAspectRatio? = null
     private var mCameraClient: MultiCameraClient? = null
@@ -68,26 +51,18 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
     }
 
     open fun initView() {
-        when (val cameraView = getCameraView()) {
-            is TextureView -> {
-                handleTextureView(cameraView)
-                cameraView
-            }
-            else -> {
-                null
-            }
-        }.apply {
-            mCameraView = this
-            // offscreen render
-            if (this == null) {
-                registerMultiCamera()
-                return
-            }
-        }?.also { view->
-            getCameraViewContainer()?.apply {
-                removeAllViews()
-                addView(view, getViewLayoutParams(this))
-            }
+        val cameraView = getCameraView()
+        val textureView = cameraView as? TextureView
+        mCameraView = if (textureView != null) cameraView else null
+        if (textureView == null) {
+            registerMultiCamera()
+            return
+        }
+
+        handleTextureView(textureView)
+        getCameraViewContainer()?.apply {
+            removeAllViews()
+            addView(textureView, getViewLayoutParams(this))
         }
     }
 
@@ -197,11 +172,6 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
         }
     }
 
-    /**
-     * Get current opened camera
-     *
-     * @return current camera, see [MultiCameraClient.ICamera]
-     */
     protected fun getCurrentCamera(): MultiCameraClient.ICamera? {
         return try {
             mCurrentCamera?.get(2, TimeUnit.SECONDS)
@@ -221,39 +191,21 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
         }
     }
 
-    /**
-     * Request permission
-     *
-     * @param device see [UsbDevice]
-     */
     protected fun requestPermission(device: UsbDevice?) {
+        if (device == null) {
+            Logger.w(TAG, "ignore permission request for null USB device")
+            return
+        }
         mRequestPermission.set(true)
         mCameraClient?.requestPermission(device)
     }
 
-    /**
-     * Generate camera
-     *
-     * @param ctx context [Context]
-     * @param device Usb device, see [UsbDevice]
-     * @return Inheritor assignment camera api policy
-     */
     protected open fun generateCamera(ctx: Context, device: UsbDevice): MultiCameraClient.ICamera {
         return CameraUVC(ctx, device)
     }
 
-    /**
-     * Get default camera
-     *
-     * @return Open camera by default, should be [UsbDevice]
-     */
     protected open fun getDefaultCamera(): UsbDevice? = null
 
-    /**
-     * Switch camera
-     *
-     * @param usbDevice camera usb device
-     */
     protected fun switchCamera(usbDevice: UsbDevice) {
         getCurrentCamera()?.closeCamera()
         try {
@@ -275,64 +227,28 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
         }
     }
 
-    /**
-     * Is camera opened
-     *
-     * @return camera open status
-     */
     protected fun isCameraOpened() = getCurrentCamera()?.isCameraOpened()  ?: false
 
-    /**
-     * Update resolution
-     *
-     * @param width camera preview width
-     * @param height camera preview height
-     */
     protected fun updateResolution(width: Int, height: Int) {
         getCurrentCamera()?.updateResolution(width, height)
     }
 
-    /**
-     * Get all preview sizes
-     *
-     * @param aspectRatio preview size aspect ratio,
-     *                      null means getting all preview sizes
-     */
     protected fun getAllPreviewSizes(aspectRatio: Double? = null) = getCurrentCamera()?.getAllPreviewSizes(aspectRatio)
 
-    /**
-     * Get current preview size
-     *
-     * @return camera preview size, see [PreviewSize]
-     */
     protected fun getCurrentPreviewSize(): PreviewSize? {
         return getCurrentCamera()?.getCameraRequest()?.let {
             PreviewSize(it.previewWidth, it.previewHeight)
         }
     }
 
-    /**
-     * Rotate camera angle
-     *
-     * @param type rotate angle, null means rotating nothing
-     * see [RotateType.ANGLE_90], [RotateType.ANGLE_270],...etc.
-     */
     protected fun setRotateType(type: RotateType) {
         getCurrentCamera()?.setRotateType(type)
     }
 
     protected fun openCamera(st: IAspectRatio? = null) {
-        when (st) {
-            is TextureView -> {
-                st
-            }
-            else -> {
-                null
-            }
-        }.apply {
-            getCurrentCamera()?.openCamera(this, getCameraRequest())
-            getCurrentCamera()?.setCameraStateCallBack(this@CameraActivity)
-        }
+        val camera = getCurrentCamera() ?: return
+        camera.openCamera(st as? TextureView, getCameraRequest())
+        camera.setCameraStateCallBack(this)
     }
 
     protected fun closeCamera() {
@@ -344,68 +260,21 @@ abstract class CameraActivity: AppCompatActivity(), ICameraStateCallBack {
     }
 
     private fun getViewLayoutParams(viewGroup: ViewGroup): ViewGroup.LayoutParams {
-        return when(viewGroup) {
-            is FrameLayout -> {
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    getGravity()
-                )
-            }
-            is LinearLayout -> {
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT
-                ).apply {
-                    gravity = getGravity()
-                }
-            }
-            is RelativeLayout -> {
-                RelativeLayout.LayoutParams(
-                    RelativeLayout.LayoutParams.MATCH_PARENT,
-                    RelativeLayout.LayoutParams.MATCH_PARENT
-                ).apply{
-                    when(getGravity()) {
-                        Gravity.TOP -> {
-                            addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE)
-                        }
-                        Gravity.BOTTOM -> {
-                            addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE)
-                        }
-                        else -> {
-                            addRule(RelativeLayout.CENTER_HORIZONTAL, RelativeLayout.TRUE)
-                            addRule(RelativeLayout.CENTER_VERTICAL, RelativeLayout.TRUE)
-                        }
-                    }
-                }
-            }
-            else -> throw IllegalArgumentException("Unsupported container view, " +
-                    "you can use FrameLayout or LinearLayout or RelativeLayout")
+        val width = ViewGroup.LayoutParams.MATCH_PARENT
+        val height = ViewGroup.LayoutParams.MATCH_PARENT
+        return if (viewGroup is FrameLayout) {
+            FrameLayout.LayoutParams(width, height, getGravity())
+        } else {
+            ViewGroup.LayoutParams(width, height)
         }
     }
 
-    /**
-     * Build the activity content view.
-     */
     protected abstract fun getRootView(layoutInflater: LayoutInflater): View?
 
-    /**
-     * Get camera view
-     *
-     * @return CameraView, such as AspectRatioTextureView etc.
-     */
     protected abstract fun getCameraView(): IAspectRatio?
 
-    /**
-     * Get camera view container
-     *
-     * @return camera view container, such as FrameLayout ect
-     */
     protected abstract fun getCameraViewContainer(): ViewGroup?
 
-    /**
-     * Camera render view show gravity
-     */
     protected open fun getGravity() = Gravity.CENTER
 
     protected open fun getCameraRequest(): CameraRequest {
