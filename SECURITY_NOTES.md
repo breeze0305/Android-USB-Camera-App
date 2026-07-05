@@ -49,6 +49,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Rewrote the active UVC camera adapter with a project-owned open/configure/start flow while preserving permission checks, preview-size fallback, and explicit error callbacks.
 - Replaced the small render rotation enum with a project-owned definition while keeping the same constants used by the preview pipeline.
 - Rewrote the active render manager with project-owned render-thread lifecycle, GL message dispatch, SurfaceTexture waiting, frame drawing, and cleanup flow.
+- Replaced the screen render wrapper with a small project-owned adapter around the EGL environment while preserving the existing preview shader path.
 
 ## Bundled Native Components
 
