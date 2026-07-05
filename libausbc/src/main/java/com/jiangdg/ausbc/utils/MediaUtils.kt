@@ -1,6 +1,7 @@
 package com.jiangdg.ausbc.utils
 
 import android.content.Context
+import android.content.res.Resources
 import java.io.IOException
 
 object MediaUtils {
@@ -19,8 +20,8 @@ object MediaUtils {
         } catch (e: IOException) {
             Logger.e(TAG, "open raw file failed", e)
             ""
-        } catch (e: RuntimeException) {
-            Logger.e(TAG, "read raw file failed", e)
+        } catch (e: Resources.NotFoundException) {
+            Logger.e(TAG, "raw file resource not found", e)
             ""
         }
     }

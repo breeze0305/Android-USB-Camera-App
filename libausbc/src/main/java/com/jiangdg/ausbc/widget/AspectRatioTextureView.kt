@@ -33,7 +33,7 @@ class AspectRatioTextureView @JvmOverloads constructor(
         val texture = surfaceTexture ?: return null
         return try {
             Surface(texture)
-        } catch (e: RuntimeException) {
+        } catch (e: Surface.OutOfResourcesException) {
             Logger.w(TAG, "create preview surface failed", e)
             null
         }
