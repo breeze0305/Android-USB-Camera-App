@@ -52,6 +52,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Replaced the screen render wrapper with a small project-owned adapter around the EGL environment while preserving the existing preview shader path.
 - Rewrote the EGL environment helper with explicit display/config/context/surface ownership checks and safer surface replacement cleanup.
 - Rewrote the camera FBO render helpers with project-owned matrix/FBO management and explicit framebuffer cleanup on render release.
+- Rewrote the shared GLES render base with project-owned shader setup, fullscreen-quad drawing, texture helpers, and correct uniform lookup for `uTextureSampler`.
 
 ## Bundled Native Components
 
