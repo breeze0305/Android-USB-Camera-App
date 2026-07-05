@@ -1030,6 +1030,10 @@ uvc_error_t uvc_parse_vc_input_terminal(uvc_device_t *dev,
 	}
 
 	term = calloc(1, sizeof(*term));
+	if (UNLIKELY(!term)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 
 	term->bTerminalID = block[3];
 	term->wTerminalType = SW_TO_SHORT(&block[4]);
@@ -1065,6 +1069,10 @@ uvc_error_t uvc_parse_vc_output_terminal(uvc_device_t *dev,
 	}
 
 	term = calloc(1, sizeof(*term));
+	if (UNLIKELY(!term)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 
 	term->bTerminalID = block[3];
 	term->wTerminalType = SW_TO_SHORT(&block[4]);
@@ -1072,7 +1080,6 @@ uvc_error_t uvc_parse_vc_output_terminal(uvc_device_t *dev,
 	term->bSourceID = block[7];
 	term->iTerminal = block[8];
 	term->request = (term->bTerminalID << 8) | info->ctrl_if.bInterfaceNumber;	// XXX
-	// TODO depending on the wTerminalType
 
 	DL_APPEND(info->ctrl_if.output_term_descs, term);
 
@@ -1092,6 +1099,10 @@ uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
 	UVC_ENTER();
 
 	unit = calloc(1, sizeof(*unit));
+	if (UNLIKELY(!unit)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 	unit->bUnitID = block[3];
 	unit->bSourceID = block[4];
 	unit->request = (unit->bUnitID << 8) | info->ctrl_if.bInterfaceNumber;	// XXX
@@ -1118,6 +1129,10 @@ uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
 	int i;
 
 	UVC_ENTER();
+	if (UNLIKELY(!unit)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 
 	unit->bUnitID = block[3];
 	memcpy(unit->guidExtensionCode, &block[4], 16);
@@ -1209,6 +1224,10 @@ uvc_error_t uvc_scan_streaming(uvc_device_t *dev, uvc_device_info_t *info,
 		}
 	}
 	stream_if = calloc(1, sizeof(*stream_if));
+	if (UNLIKELY(!stream_if)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 	stream_if->parent = info;
 	stream_if->bInterfaceNumber = if_desc->bInterfaceNumber;
 	DL_APPEND(info->stream_ifs, stream_if);
@@ -1255,6 +1274,10 @@ uvc_error_t uvc_parse_vs_input_header(uvc_streaming_interface_t *stream_if,
 		const uint8_t p = (block_size - 13) / n;
 		if (LIKELY(p)) {
 			uint64_t *bmaControls = (uint64_t *)calloc(p, sizeof(uint64_t));
+			if (UNLIKELY(!bmaControls)) {
+				UVC_EXIT(UVC_ERROR_NO_MEM);
+				return UVC_ERROR_NO_MEM;
+			}
 			stream_if->bmaControls = bmaControls;
 			const uint8_t *bma;
 			int pp, nn;
@@ -1281,6 +1304,10 @@ uvc_error_t uvc_parse_vs_format_uncompressed(
 	UVC_ENTER();
 
 	uvc_format_desc_t *format = calloc(1, sizeof(*format));
+	if (UNLIKELY(!format)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 
 	format->parent = stream_if;
 	format->bDescriptorSubtype = block[2];
@@ -1310,6 +1337,10 @@ uvc_error_t uvc_parse_vs_frame_format(uvc_streaming_interface_t *stream_if,
 	UVC_ENTER();
 
 	uvc_format_desc_t *format = calloc(1, sizeof(*format));
+	if (UNLIKELY(!format)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 
 	format->parent = stream_if;
 	format->bDescriptorSubtype = block[2];
@@ -1339,6 +1370,10 @@ uvc_error_t uvc_parse_vs_format_mjpeg(uvc_streaming_interface_t *stream_if,
 	UVC_ENTER();
 
 	uvc_format_desc_t *format = calloc(1, sizeof(*format));
+	if (UNLIKELY(!format)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 
 	format->parent = stream_if;
 	format->bDescriptorSubtype = block[2];
@@ -1374,7 +1409,15 @@ uvc_error_t uvc_parse_vs_frame_frame(uvc_streaming_interface_t *stream_if,
   UVC_ENTER();
 
   format = stream_if->format_descs->prev;
+  if (UNLIKELY(!format)) {
+    UVC_EXIT(UVC_ERROR_INVALID_PARAM);
+    return UVC_ERROR_INVALID_PARAM;
+  }
   frame = calloc(1, sizeof(*frame));
+  if (UNLIKELY(!frame)) {
+    UVC_EXIT(UVC_ERROR_NO_MEM);
+    return UVC_ERROR_NO_MEM;
+  }
 
   frame->parent = format;
 
@@ -1395,6 +1438,11 @@ uvc_error_t uvc_parse_vs_frame_frame(uvc_streaming_interface_t *stream_if,
     frame->dwFrameIntervalStep = DW_TO_INT(&block[34]);
   } else {
     frame->intervals = calloc(block[21] + 1, sizeof(frame->intervals[0]));
+    if (UNLIKELY(!frame->intervals)) {
+      free(frame);
+      UVC_EXIT(UVC_ERROR_NO_MEM);
+      return UVC_ERROR_NO_MEM;
+    }
     p = &block[26];
 
     for (i = 0; i < block[21]; ++i) {
@@ -1429,7 +1477,15 @@ uvc_error_t uvc_parse_vs_frame_uncompressed(
 	UVC_ENTER();
 
 	format = stream_if->format_descs->prev;
+	if (UNLIKELY(!format)) {
+		UVC_EXIT(UVC_ERROR_INVALID_PARAM);
+		return UVC_ERROR_INVALID_PARAM;
+	}
 	frame = calloc(1, sizeof(*frame));
+	if (UNLIKELY(!frame)) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 
 	frame->parent = format;
 
@@ -1450,6 +1506,11 @@ uvc_error_t uvc_parse_vs_frame_uncompressed(
 		frame->dwFrameIntervalStep = DW_TO_INT(&block[34]);
 	} else {
 		frame->intervals = calloc(n + 1, sizeof(frame->intervals[0]));
+		if (UNLIKELY(!frame->intervals)) {
+			free(frame);
+			UVC_EXIT(UVC_ERROR_NO_MEM);
+			return UVC_ERROR_NO_MEM;
+		}
 		p = &block[26];
 
 		for (i = 0; i < n; ++i) {
