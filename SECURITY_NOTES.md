@@ -40,6 +40,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Narrowed the preview host surface to the TextureView/OpenGL path used by this app and removed unused SurfaceView/GLSurfaceView render-mode selection code.
 - Removed unused app demo theme resources and trimmed unused AUSBC utility helpers that were not referenced by the USB camera preview flow.
 - Rewrote the active aspect-ratio preview widget and interface with a small project-owned implementation, including safer null handling for missing `SurfaceTexture` instances.
+- Rewrote small active AUSBC callback and camera-request data APIs as concise project-owned Kotlin definitions while preserving the existing public method names used by the app.
 
 ## Bundled Native Components
 
