@@ -200,6 +200,12 @@ uvc_error_t uvc_find_device2(uvc_context_t *ctx, uvc_device_t **device, int vid,
 
 	if (usb_dev) {
 		*device = malloc(sizeof(uvc_device_t/* *device */));
+		if (!*device) {
+			*device = NULL;
+			libusb_unref_device(usb_dev);
+			UVC_EXIT(UVC_ERROR_NO_MEM);
+			return UVC_ERROR_NO_MEM;
+		}
 		(*device)->ctx = ctx;
 		(*device)->ref = 0;
 		(*device)->usb_dev = usb_dev;
@@ -230,6 +236,12 @@ uvc_error_t uvc_get_device_with_fd(uvc_context_t *ctx, uvc_device_t **device,
 
 	if (LIKELY(usb_dev)) {
 		*device = malloc(sizeof(uvc_device_t/* *device */));
+		if (!*device) {
+			*device = NULL;
+			libusb_unref_device(usb_dev);
+			UVC_EXIT(UVC_ERROR_NO_MEM);
+			RETURN(UVC_ERROR_NO_MEM, int);
+		}
 		(*device)->ctx = ctx;
 		(*device)->ref = 0;
 		(*device)->usb_dev = usb_dev;
@@ -285,6 +297,10 @@ uvc_error_t uvc_open(uvc_device_t *dev, uvc_device_handle_t **devh) {
 	uvc_ref_device(dev);
 
 	internal_devh = calloc(1, sizeof(*internal_devh));
+	if (!internal_devh) {
+		ret = UVC_ERROR_NO_MEM;
+		goto fail2;
+	}
 	internal_devh->dev = dev;
 	internal_devh->usb_devh = usb_devh;
 	internal_devh->reset_on_release_if = 0;	// XXX
@@ -494,6 +510,11 @@ uvc_error_t uvc_get_device_descriptor(uvc_device_t *dev,
 	uvc_error_t ret;
 
 	UVC_ENTER();
+	if (!desc) {
+		UVC_EXIT(UVC_ERROR_INVALID_PARAM);
+		return UVC_ERROR_INVALID_PARAM;
+	}
+	*desc = NULL;
 
 	ret = libusb_get_device_descriptor(dev->usb_dev, &usb_desc);
 
@@ -503,6 +524,10 @@ uvc_error_t uvc_get_device_descriptor(uvc_device_t *dev,
 	}
 
 	desc_internal = calloc(1, sizeof(*desc_internal));
+	if (!desc_internal) {
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 	desc_internal->idVendor = usb_desc.idVendor;
 	desc_internal->idProduct = usb_desc.idProduct;
 
@@ -549,6 +574,11 @@ uvc_error_t uvc_get_device_descriptor(uvc_device_t *dev,
  */
 void uvc_free_device_descriptor(uvc_device_descriptor_t *desc) {
 	UVC_ENTER();
+
+	if (!desc) {
+		UVC_EXIT_VOID();
+		return;
+	}
 
 	if (desc->serialNumber)
 		free((void*) desc->serialNumber);
@@ -599,6 +629,7 @@ uvc_error_t uvc_get_device_list(uvc_context_t *ctx, uvc_device_t ***list) {
 	const struct libusb_interface_descriptor *if_desc;
 
 	UVC_ENTER();
+	ret = UVC_SUCCESS;
 
 	num_usb_devices = libusb_get_device_list(ctx->usb_ctx, &usb_dev_list);
 
@@ -608,6 +639,11 @@ uvc_error_t uvc_get_device_list(uvc_context_t *ctx, uvc_device_t ***list) {
 	}
 
 	list_internal = malloc(sizeof(*list_internal));
+	if (!list_internal) {
+		libusb_free_device_list(usb_dev_list, 1);
+		UVC_EXIT(UVC_ERROR_NO_MEM);
+		return UVC_ERROR_NO_MEM;
+	}
 	*list_internal = NULL;
 
 	num_uvc_devices = 0;
@@ -620,8 +656,10 @@ uvc_error_t uvc_get_device_list(uvc_context_t *ctx, uvc_device_t ***list) {
 		if (libusb_get_config_descriptor(usb_dev, 0, &config) != 0)
 			continue;
 
-		if (libusb_get_device_descriptor (usb_dev, &desc) != LIBUSB_SUCCESS)
+		if (libusb_get_device_descriptor (usb_dev, &desc) != LIBUSB_SUCCESS) {
+			libusb_free_config_descriptor(config);
 			continue;
+		}
 
 		// Special case for Imaging Source cameras
 		if ((0x199e == desc.idVendor) && (0x8101 == desc.idProduct)) {
@@ -650,14 +688,26 @@ uvc_error_t uvc_get_device_list(uvc_context_t *ctx, uvc_device_t ***list) {
 
 		if (got_interface) {
 			uvc_device_t *uvc_dev = malloc(sizeof(*uvc_dev));
+			uvc_device_t **next_list;
+			if (!uvc_dev) {
+				ret = UVC_ERROR_NO_MEM;
+				break;
+			}
 			uvc_dev->ctx = ctx;
 			uvc_dev->ref = 0;
 			uvc_dev->usb_dev = usb_dev;
 			uvc_ref_device(uvc_dev);
 
 			num_uvc_devices++;
-			list_internal = realloc(list_internal,
+			next_list = realloc(list_internal,
 					(num_uvc_devices + 1) * sizeof(*list_internal));
+			if (!next_list) {
+				uvc_unref_device(uvc_dev);
+				num_uvc_devices--;
+				ret = UVC_ERROR_NO_MEM;
+				break;
+			}
+			list_internal = next_list;
 
 			list_internal[num_uvc_devices - 1] = uvc_dev;
 			list_internal[num_uvc_devices] = NULL;
@@ -669,6 +719,12 @@ uvc_error_t uvc_get_device_list(uvc_context_t *ctx, uvc_device_t ***list) {
 	}
 
 	libusb_free_device_list(usb_dev_list, 1);
+
+	if (ret != UVC_SUCCESS) {
+		uvc_free_device_list(list_internal, 1);
+		UVC_EXIT(ret);
+		return ret;
+	}
 
 	*list = list_internal;
 
@@ -689,6 +745,11 @@ void uvc_free_device_list(uvc_device_t **list, uint8_t unref_devices) {
 	int dev_idx = 0;
 
 	UVC_ENTER();
+
+	if (!list) {
+		UVC_EXIT_VOID();
+		return;
+	}
 
 	if (unref_devices) {
 		while ((dev = list[dev_idx++]) != NULL ) {
@@ -1592,6 +1653,11 @@ uvc_error_t uvc_parse_vs(uvc_device_t *dev, uvc_device_info_t *info,
  */
 void uvc_free_devh(uvc_device_handle_t *devh) {
 	UVC_ENTER();
+
+	if (!devh) {
+		UVC_EXIT_VOID();
+		return;
+	}
 
 	pthread_mutex_destroy(&devh->status_mutex);	// XXX saki
 	if (devh->info)
