@@ -1,18 +1,3 @@
-/*
- * Copyright 2017-2023 Jiangdg
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.jiangdg.ausbc.widget
 
 import android.content.Context
@@ -22,18 +7,13 @@ import android.view.TextureView
 import com.jiangdg.ausbc.utils.Logger
 import kotlin.math.abs
 
-/** Adaptive TextureView
- * Aspect ratio (width:height, such as 4:3, 16:9).
- *
- * @author Created by jiangdg on 2021/12/23
- */
-class AspectRatioTextureView: TextureView, IAspectRatio {
+class AspectRatioTextureView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : TextureView(context, attrs, defStyleAttr), IAspectRatio {
 
-    private var mAspectRatio = -1.0
-
-    constructor(context: Context) : this(context, null)
-    constructor(context: Context, attributeSet: AttributeSet?) : this(context, attributeSet, 0)
-    constructor(context: Context, attributeSet: AttributeSet?, defStyleAttr: Int) : super(context, attributeSet, defStyleAttr)
+    private var aspectRatio = 0.0
 
     override fun setAspectRatio(width: Int, height: Int) {
         if (width <= 0 || height <= 0) {
@@ -41,24 +21,18 @@ class AspectRatioTextureView: TextureView, IAspectRatio {
             return
         }
         post {
-//            val orientation = context.resources.configuration.orientation
-//        // 处理竖屏和横屏情况
-//        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-//            setAspectRatio(height.toDouble() / width)
-//            return
-//        }
-            setAspectRatio(width.toDouble() / height)
+            setAspectRatio(width.toDouble() / height.toDouble())
         }
-
     }
 
-    override fun getSurfaceWidth(): Int  = measuredWidth
+    override fun getSurfaceWidth(): Int = measuredWidth
 
-    override fun getSurfaceHeight(): Int  = measuredHeight
+    override fun getSurfaceHeight(): Int = measuredHeight
 
     override fun getSurface(): Surface? {
+        val texture = surfaceTexture ?: return null
         return try {
-            Surface(surfaceTexture)
+            Surface(texture)
         } catch (e: RuntimeException) {
             Logger.w(TAG, "create preview surface failed", e)
             null
@@ -66,56 +40,51 @@ class AspectRatioTextureView: TextureView, IAspectRatio {
     }
 
     override fun postUITask(task: () -> Unit) {
-        post {
-            task()
-        }
-    }
-
-    private fun setAspectRatio(aspectRatio: Double) {
-        if (aspectRatio < 0 || mAspectRatio == aspectRatio) {
-            return
-        }
-        mAspectRatio = aspectRatio
-        Logger.i(TAG, "AspectRatio = $mAspectRatio")
-        requestLayout()
+        post(task)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        var initialWidth = MeasureSpec.getSize(widthMeasureSpec)
-        var initialHeight = MeasureSpec.getSize(heightMeasureSpec)
-        val horizontalPadding = paddingLeft - paddingRight
-        val verticalPadding = paddingTop - paddingBottom
-        initialWidth -= horizontalPadding
-        initialHeight -= verticalPadding
-        // 比较预览与TextureView(内容)纵横比
-        // 如果有变化，重新设置TextureView尺寸
-        if (initialWidth <= 0 || initialHeight <= 0) {
+        val measuredWidth = MeasureSpec.getSize(widthMeasureSpec)
+        val measuredHeight = MeasureSpec.getSize(heightMeasureSpec)
+        if (aspectRatio <= 0.0 || measuredWidth <= 0 || measuredHeight <= 0) {
             super.onMeasure(widthMeasureSpec, heightMeasureSpec)
             return
         }
-        val viewAspectRatio = initialWidth.toDouble() / initialHeight
-        val diff = mAspectRatio / viewAspectRatio - 1
-        var wMeasureSpec = widthMeasureSpec
-        var hMeasureSpec = heightMeasureSpec
-        if (mAspectRatio > 0 && abs(diff) > 0.01) {
-            // diff > 0， 按宽缩放
-            // diff < 0， 按高缩放
-            if (diff > 0) {
-                initialHeight = (initialWidth / mAspectRatio).toInt()
-            } else {
-                initialWidth = (initialHeight * mAspectRatio).toInt()
-            }
-            // 重新设置TextureView尺寸
-            // 注意加回padding大小
-            initialWidth += horizontalPadding
-            initialHeight += verticalPadding
-            wMeasureSpec = MeasureSpec.makeMeasureSpec(initialWidth, MeasureSpec.EXACTLY)
-            hMeasureSpec = MeasureSpec.makeMeasureSpec(initialHeight, MeasureSpec.EXACTLY)
+
+        val horizontalPadding = paddingLeft + paddingRight
+        val verticalPadding = paddingTop + paddingBottom
+        val contentWidth = (measuredWidth - horizontalPadding).coerceAtLeast(0)
+        val contentHeight = (measuredHeight - verticalPadding).coerceAtLeast(0)
+        if (contentWidth == 0 || contentHeight == 0) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+            return
         }
-        super.onMeasure(wMeasureSpec, hMeasureSpec)
+
+        var targetWidth = contentWidth
+        var targetHeight = contentHeight
+        val currentRatio = contentWidth.toDouble() / contentHeight.toDouble()
+        if (abs(aspectRatio / currentRatio - 1.0) > 0.01) {
+            if (aspectRatio > currentRatio) {
+                targetHeight = (contentWidth / aspectRatio).toInt()
+            } else {
+                targetWidth = (contentHeight * aspectRatio).toInt()
+            }
+        }
+
+        super.onMeasure(
+            MeasureSpec.makeMeasureSpec(targetWidth + horizontalPadding, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(targetHeight + verticalPadding, MeasureSpec.EXACTLY)
+        )
     }
 
-    companion object {
+    private fun setAspectRatio(newRatio: Double) {
+        if (newRatio <= 0.0 || aspectRatio == newRatio) return
+        aspectRatio = newRatio
+        Logger.i(TAG, "AspectRatio = $aspectRatio")
+        requestLayout()
+    }
+
+    private companion object {
         private const val TAG = "AspectRatioTextureView"
     }
 }
