@@ -1702,10 +1702,18 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
 
 	/* copy the image data from the hold buffer to the frame (unnecessary extra buf?) */
 	if (UNLIKELY(frame->data_bytes < strmh->hold_bytes)) {
-		frame->data = realloc(frame->data, strmh->hold_bytes);	// TODO add error handling when failed realloc
+		void *new_data = realloc(frame->data, strmh->hold_bytes);
+		if (UNLIKELY(!new_data)) {
+			LOGE("failed to grow frame buffer to %zu bytes", strmh->hold_bytes);
+			frame->actual_bytes = 0;
+			return;
+		}
+		frame->data = new_data;
 		frame->data_bytes = strmh->hold_bytes;
 	}
-	memcpy(frame->data, strmh->holdbuf, strmh->hold_bytes/*frame->data_bytes*/);	// XXX
+	if (LIKELY(strmh->hold_bytes > 0)) {
+		memcpy(frame->data, strmh->holdbuf, strmh->hold_bytes/*frame->data_bytes*/);	// XXX
+	}
 
 	/** @todo set the frame time */
 }
