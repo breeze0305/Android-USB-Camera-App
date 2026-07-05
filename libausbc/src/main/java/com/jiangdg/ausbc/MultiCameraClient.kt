@@ -3,13 +3,16 @@ package com.jiangdg.ausbc
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbDevice
-import android.os.*
-import com.jiangdg.ausbc.callback.*
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Looper
+import android.os.Message
+import com.jiangdg.ausbc.callback.ICameraStateCallBack
+import com.jiangdg.ausbc.callback.IDeviceConnectCallBack
 import com.jiangdg.ausbc.camera.bean.CameraRequest
 import com.jiangdg.ausbc.camera.bean.PreviewSize
 import com.jiangdg.ausbc.render.RenderManager
 import com.jiangdg.ausbc.render.env.RotateType
-import com.jiangdg.ausbc.utils.CameraUtils
 import com.jiangdg.ausbc.utils.CameraUtils.isFilterDevice
 import com.jiangdg.ausbc.utils.CameraUtils.isUsbCamera
 import com.jiangdg.ausbc.utils.Logger
@@ -17,21 +20,15 @@ import com.jiangdg.ausbc.utils.OpenGLUtils
 import com.jiangdg.ausbc.utils.SettableFuture
 import com.jiangdg.ausbc.utils.Utils
 import com.jiangdg.ausbc.widget.IAspectRatio
-import com.jiangdg.usb.*
 import com.jiangdg.usb.DeviceFilter
+import com.jiangdg.usb.USBMonitor
 import com.jiangdg.uvc.UVCCamera
-import java.util.*
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.math.abs
 
-/** Multi-road camera client
- *
- * @author Created by jiangdg on 2022/7/18
- *      Modified for v3.3.0 by jiangdg on 2023/1/15
- */
 class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
     private var mUsbMonitor: USBMonitor? = null
     private val mMainHandler by lazy {
@@ -40,106 +37,53 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
 
     init {
         mUsbMonitor = USBMonitor(ctx, object : USBMonitor.OnDeviceConnectListener {
-            /**
-             * Called by receive usb device inserted broadcast
-             *
-             * @param device usb device info,see [UsbDevice]
-             */
             override fun onAttach(device: UsbDevice?) {
-                if (Utils.debugCamera) {
-                    Logger.i(TAG, "attach device name/pid/vid:${device?.deviceName}&${device?.productId}&${device?.vendorId} ")
-                }
-                device ?: return
-                if (!isUsbCamera(device) && !isFilterDevice(ctx, device)) {
-                    return
-                }
-                mMainHandler.post {
-                    callback?.onAttachDev(device)
-                }
+                dispatchUsbDevice(ctx, "attach", device) { callback?.onAttachDev(it) }
             }
 
-            /**
-             * Called by receive usb device pulled out broadcast
-             *
-             * @param device usb device info,see [UsbDevice]
-             */
             override fun onDetach(device: UsbDevice?) {
-                if (Utils.debugCamera) {
-                    Logger.i(TAG, "detach device name/pid/vid:${device?.deviceName}&${device?.productId}&${device?.vendorId} ")
-                }
-                device ?: return
-                if (!isUsbCamera(device) && !isFilterDevice(ctx, device)) {
-                    return
-                }
-                mMainHandler.post {
-                    callback?.onDetachDec(device)
-                }
+                dispatchUsbDevice(ctx, "detach", device) { callback?.onDetachDec(it) }
             }
 
-            /**
-             * Called by granted permission
-             *
-             * @param device usb device info,see [UsbDevice]
-             */
             override fun onConnect(
                 device: UsbDevice?,
                 ctrlBlock: USBMonitor.UsbControlBlock?,
                 createNew: Boolean
             ) {
-                if (Utils.debugCamera) {
-                    Logger.i(TAG, "connect device name/pid/vid:${device?.deviceName}&${device?.productId}&${device?.vendorId} ")
-                }
-                device ?: return
-                if (!isUsbCamera(device) && !isFilterDevice(ctx, device)) {
-                    return
-                }
-                mMainHandler.post {
-                    callback?.onConnectDev(device, ctrlBlock)
+                dispatchUsbDevice(ctx, "connect", device) {
+                    callback?.onConnectDev(it, ctrlBlock)
                 }
             }
 
-            /**
-             * Called by dis unauthorized permission
-             *
-             * @param device usb device info,see [UsbDevice]
-             */
             override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
-                if (Utils.debugCamera) {
-                    Logger.i(TAG, "disconnect device name/pid/vid:${device?.deviceName}&${device?.productId}&${device?.vendorId} ")
-                }
-                device ?: return
-                if (!isUsbCamera(device) && !isFilterDevice(ctx, device)) {
-                    return
-                }
-                mMainHandler.post {
-                    callback?.onDisConnectDec(device, ctrlBlock)
+                dispatchUsbDevice(ctx, "disconnect", device) {
+                    callback?.onDisConnectDec(it, ctrlBlock)
                 }
             }
 
-
-            /**
-             * Called by dis unauthorized permission or request permission exception
-             *
-             * @param device usb device info,see [UsbDevice]
-             */
             override fun onCancel(device: UsbDevice?) {
-                if (Utils.debugCamera) {
-                    Logger.i(TAG, "cancel device name/pid/vid:${device?.deviceName}&${device?.productId}&${device?.vendorId} ")
-                }
-                device ?: return
-                if (!isUsbCamera(device) && !isFilterDevice(ctx, device)) {
-                    return
-                }
-                mMainHandler.post {
-                    callback?.onCancelDev(device)
-                }
+                dispatchUsbDevice(ctx, "cancel", device) { callback?.onCancelDev(it) }
             }
         })
     }
 
-    /**
-     * Register usb insert broadcast
-     */
+    private fun dispatchUsbDevice(
+        context: Context,
+        event: String,
+        device: UsbDevice?,
+        action: (UsbDevice) -> Unit
+    ) {
+        if (Utils.debugCamera) {
+            Logger.i(TAG, "$event device name/pid/vid:${device?.deviceName}&${device?.productId}&${device?.vendorId}")
+        }
+        if (device == null || (!isUsbCamera(device) && !isFilterDevice(context, device))) {
+            return
+        }
+        mMainHandler.post {
+            action(device)
+        }
+    }
+
     fun register() {
         if (isMonitorRegistered()) {
             return
@@ -150,9 +94,6 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
         mUsbMonitor?.register()
     }
 
-    /**
-     * UnRegister usb insert broadcast
-     */
     fun unRegister() {
         if (!isMonitorRegistered()) {
             return
@@ -163,12 +104,6 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
         mUsbMonitor?.unregister()
     }
 
-    /**
-     * Request usb device permission
-     *
-     * @param device see [UsbDevice]
-     * @return true ready to request permission
-     */
     fun requestPermission(device: UsbDevice?): Boolean {
         if (!isMonitorRegistered()) {
             Logger.w(TAG, "Usb monitor haven't been registered.")
@@ -178,20 +113,8 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
         return true
     }
 
-    /**
-     * Uvc camera has permission
-     *
-     * @param device see [UsbDevice]
-     * @return true permission granted
-     */
     fun hasPermission(device: UsbDevice?) = mUsbMonitor?.hasPermission(device)
 
-    /**
-     * Get device list
-     *
-     * @param list filter regular
-     * @return filter device list
-     */
     fun getDeviceList(list: List<DeviceFilter>? = null): MutableList<UsbDevice>? {
         list?.let {
             addDeviceFilters(it)
@@ -199,27 +122,14 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
         return mUsbMonitor?.deviceList
     }
 
-    /**
-     * Add device filters
-     *
-     * @param list filter regular
-     */
     fun addDeviceFilters(list: List<DeviceFilter>) {
         mUsbMonitor?.addDeviceFilter(list)
     }
 
-    /**
-     * Remove device filters
-     *
-     * @param list filter regular
-     */
     fun removeDeviceFilters(list: List<DeviceFilter>) {
         mUsbMonitor?.removeDeviceFilter(list)
     }
 
-    /**
-     * Destroy usb monitor engine
-     */
     fun destroy() {
         mUsbMonitor?.destroy()
     }

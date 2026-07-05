@@ -44,6 +44,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Reworked thin active AUSBC utility wrappers and added explicit null handling around USB device filter checks.
 - Replaced the legacy AQS-based `SettableFuture` helper with a small project-owned synchronized implementation used by camera/render wait paths.
 - Narrowed the active camera activity base toward this app's TextureView preview flow, removed unused generic container branches, and added a guard for null USB permission requests.
+- Consolidated the active multi-camera USB event dispatch path behind a project-owned filter helper to keep attach/connect/detach/cancel handling consistent.
 
 ## Bundled Native Components
 
