@@ -438,7 +438,7 @@ public final class USBMonitor {
 				}
 			}
 		} catch (SecurityException e) {
-			XLogWrapper.w("jiangdg", e.getLocalizedMessage());
+			XLogWrapper.w(TAG, "USB permission check failed", e);
 		}
 
 		return hasPermission;
@@ -521,13 +521,13 @@ public final class USBMonitor {
 						if (device != null) {
 							// get permission, call onConnect
 							if (DEBUG)
-								XLogWrapper.w(TAG, "get permission success in mUsbReceiver");
+								XLogWrapper.i(TAG, "permission granted in USB receiver");
 							processConnect(device);
 						}
 					} else {
 						// failed to get permission
 						if (DEBUG)
-							XLogWrapper.w(TAG, "get permission failed in mUsbReceiver");
+							XLogWrapper.w(TAG, "permission denied in USB receiver");
 						processCancel(device);
 					}
 				}

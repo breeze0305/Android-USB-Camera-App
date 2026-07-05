@@ -54,6 +54,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Rewrote the camera FBO render helpers with project-owned matrix/FBO management and explicit framebuffer cleanup on render release.
 - Rewrote the shared GLES render base with project-owned shader setup, fullscreen-quad drawing, texture helpers, and correct uniform lookup for `uTextureSampler`.
 - Replaced the bundled XLog wrapper with a small project-owned Android Log adapter and removed the XLog dependency so camera logs are no longer written to app files.
+- Reduced USB permission logging noise by removing a legacy tag string and keeping successful permission receiver details behind the debug flag.
 
 ## Bundled Native Components
 
