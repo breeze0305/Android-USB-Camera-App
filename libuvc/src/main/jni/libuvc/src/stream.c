@@ -1305,6 +1305,7 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
 	uvc_stream_handle_t *strmh = NULL;
 	uvc_streaming_interface_t *stream_if;
 	uvc_error_t ret;
+	int interface_claimed = 0;
 
 	UVC_ENTER();
 
@@ -1331,6 +1332,7 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
 	ret = uvc_claim_if(strmh->devh, strmh->stream_if->bInterfaceNumber);
 	if (UNLIKELY(ret != UVC_SUCCESS))
 		goto fail;
+	interface_claimed = 1;
 
 	ret = uvc_stream_ctrl(strmh, ctrl);
 	if (UNLIKELY(ret != UVC_SUCCESS))
@@ -1341,6 +1343,10 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
 	/** @todo take only what we need */
 	strmh->outbuf = malloc(LIBUVC_XFER_BUF_SIZE);
 	strmh->holdbuf = malloc(LIBUVC_XFER_BUF_SIZE);
+	if (UNLIKELY(!strmh->outbuf || !strmh->holdbuf)) {
+		ret = UVC_ERROR_NO_MEM;
+		goto fail;
+	}
 	strmh->size_buf = LIBUVC_XFER_BUF_SIZE;	// xxx for boundary check
 
 	pthread_mutex_init(&strmh->cb_mutex, NULL);
@@ -1354,8 +1360,13 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
 	return UVC_SUCCESS;
 
 fail:
-	if (strmh)
+	if (strmh) {
+		if (interface_claimed)
+			uvc_release_if(strmh->devh, strmh->stream_if->bInterfaceNumber);
+		free(strmh->outbuf);
+		free(strmh->holdbuf);
 		free(strmh);
+	}
 	UVC_EXIT(ret);
 	return ret;
 }
@@ -1396,6 +1407,8 @@ uvc_error_t uvc_stream_start_bandwidth(uvc_stream_handle_t *strmh,
 	size_t total_transfer_size;
 	struct libusb_transfer *transfer;
 	int transfer_id;
+	int cb_thread_started = 0;
+	int submitted_transfers = 0;
 
 	ctrl = &strmh->cur_ctrl;
 
@@ -1554,8 +1567,16 @@ uvc_error_t uvc_stream_start_bandwidth(uvc_stream_handle_t *strmh,
 		MARK("Set up the transfers");
 		for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; ++transfer_id) {
 			transfer = libusb_alloc_transfer(packets_per_transfer);
+			if (UNLIKELY(!transfer)) {
+				ret = UVC_ERROR_NO_MEM;
+				goto fail;
+			}
 			strmh->transfers[transfer_id] = transfer;
 			strmh->transfer_bufs[transfer_id] = malloc(total_transfer_size);
+			if (UNLIKELY(!strmh->transfer_bufs[transfer_id])) {
+				ret = UVC_ERROR_NO_MEM;
+				goto fail;
+			}
 
 			libusb_fill_iso_transfer(transfer, strmh->devh->usb_devh,
 				format_desc->parent->bEndpointAddress,
@@ -1570,8 +1591,16 @@ uvc_error_t uvc_stream_start_bandwidth(uvc_stream_handle_t *strmh,
 		/** prepare for bulk transfer */
 		for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; ++transfer_id) {
 			transfer = libusb_alloc_transfer(0);
+			if (UNLIKELY(!transfer)) {
+				ret = UVC_ERROR_NO_MEM;
+				goto fail;
+			}
 			strmh->transfers[transfer_id] = transfer;
 			strmh->transfer_bufs[transfer_id] = malloc(strmh->cur_ctrl.dwMaxPayloadTransferSize);
+			if (UNLIKELY(!strmh->transfer_bufs[transfer_id])) {
+				ret = UVC_ERROR_NO_MEM;
+				goto fail;
+			}
 			libusb_fill_bulk_transfer(transfer, strmh->devh->usb_devh,
 				format_desc->parent->bEndpointAddress,
 				strmh->transfer_bufs[transfer_id],
@@ -1588,7 +1617,11 @@ uvc_error_t uvc_stream_start_bandwidth(uvc_stream_handle_t *strmh,
 	 */
 	MARK("create callback thread");
 	if LIKELY(cb) {
-		pthread_create(&strmh->cb_thread, NULL, _uvc_user_caller, (void*) strmh);
+		if (UNLIKELY(pthread_create(&strmh->cb_thread, NULL, _uvc_user_caller, (void*) strmh))) {
+			ret = UVC_ERROR_OTHER;
+			goto fail;
+		}
+		cb_thread_started = 1;
 	}
 	MARK("submit transfers");
 	for (transfer_id = 0; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; transfer_id++) {
@@ -1597,6 +1630,7 @@ uvc_error_t uvc_stream_start_bandwidth(uvc_stream_handle_t *strmh,
 			UVC_DEBUG("libusb_submit_transfer failed");
 			break;
 		}
+		submitted_transfers++;
 	}
 
 	if (UNLIKELY(ret != UVC_SUCCESS)) {
@@ -1609,6 +1643,38 @@ uvc_error_t uvc_stream_start_bandwidth(uvc_stream_handle_t *strmh,
 fail:
 	LOGE("fail");
 	strmh->running = 0;
+	if (cb_thread_started) {
+		pthread_mutex_lock(&strmh->cb_mutex);
+		pthread_cond_broadcast(&strmh->cb_cond);
+		pthread_mutex_unlock(&strmh->cb_mutex);
+		pthread_join(strmh->cb_thread, NULL);
+	}
+	if (submitted_transfers > 0) {
+		pthread_mutex_lock(&strmh->cb_mutex);
+		for (transfer_id = 0; transfer_id < submitted_transfers; transfer_id++) {
+			if (strmh->transfers[transfer_id])
+				libusb_cancel_transfer(strmh->transfers[transfer_id]);
+		}
+		while (submitted_transfers > 0) {
+			int active_transfers = 0;
+			for (transfer_id = 0; transfer_id < submitted_transfers; transfer_id++) {
+				if (strmh->transfers[transfer_id])
+					active_transfers++;
+			}
+			if (!active_transfers)
+				break;
+			pthread_cond_wait(&strmh->cb_cond, &strmh->cb_mutex);
+		}
+		pthread_mutex_unlock(&strmh->cb_mutex);
+	}
+	for (transfer_id = submitted_transfers; transfer_id < LIBUVC_NUM_TRANSFER_BUFS; transfer_id++) {
+		free(strmh->transfer_bufs[transfer_id]);
+		strmh->transfer_bufs[transfer_id] = NULL;
+		if (strmh->transfers[transfer_id]) {
+			libusb_free_transfer(strmh->transfers[transfer_id]);
+			strmh->transfers[transfer_id] = NULL;
+		}
+	}
 	UVC_EXIT(ret);
 	return ret;
 }

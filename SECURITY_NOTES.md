@@ -33,6 +33,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Trimmed `libuvc/src/ctrl.c` and `libuvc.h` to the request error-code helpers still needed by streaming; unused generic control transfer, brightness, focus, exposure, zoom, white-balance, pan/tilt, and processing-unit get/set APIs are no longer compiled or advertised.
 - Added allocation-failure handling to the UVC stream frame-buffer growth path so a failed `realloc` no longer loses the previous buffer or falls through into an unsafe copy.
 - Hardened the shared UVC frame resize helper so failed `realloc` calls preserve the previous frame buffer and return `UVC_ERROR_NO_MEM` before mutating frame size metadata.
+- Added allocation and startup-failure cleanup checks to UVC stream open/start paths, including transfer buffer allocation, transfer allocation, callback-thread creation, and partial libusb transfer submission.
 - Removed unused AUSBC demo surfaces: pusher APIs, the old single-camera client, fragment/dialog demo bases, demo resources, recording/streaming/image-capture APIs, raw preview callback/FBO readback support, render effects, capture widgets, media helper code, render event bus, Activity stack/crash utility framework, and legacy Camera1/Camera2/strategy abstractions that are not used by this app's USB preview flow.
 - Narrowed the preview host surface to the TextureView/OpenGL path used by this app and removed unused SurfaceView/GLSurfaceView render-mode selection code.
 
