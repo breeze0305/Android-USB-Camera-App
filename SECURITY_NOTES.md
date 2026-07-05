@@ -59,6 +59,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Rewrote the active USB `DeviceFilter` helper with project-owned XML parsing and matching logic while redacting manufacturer/product/serial values from `toString()`.
 - Rewrote the active UVC `Size` parcelable with project-owned interval copying and frame-rate calculation instead of exception-driven fallback logic.
 - Rewrote the Java `UVCCamera` wrapper around the existing JNI bridge with project-owned open/preview-size/supported-size/surface lifecycle handling.
+- Narrowed USB permission request failure handling to Android security/argument exceptions and removed localized exception text from the log message.
 
 ## Bundled Native Components
 
