@@ -58,6 +58,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Narrowed remaining helper exception handling for raw shader resources and preview `Surface` creation to their specific Android failure types.
 - Rewrote the active USB `DeviceFilter` helper with project-owned XML parsing and matching logic while redacting manufacturer/product/serial values from `toString()`.
 - Rewrote the active UVC `Size` parcelable with project-owned interval copying and frame-rate calculation instead of exception-driven fallback logic.
+- Rewrote the Java `UVCCamera` wrapper around the existing JNI bridge with project-owned open/preview-size/supported-size/surface lifecycle handling.
 
 ## Bundled Native Components
 
