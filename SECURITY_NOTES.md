@@ -51,6 +51,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Rewrote the active render manager with project-owned render-thread lifecycle, GL message dispatch, SurfaceTexture waiting, frame drawing, and cleanup flow.
 - Replaced the screen render wrapper with a small project-owned adapter around the EGL environment while preserving the existing preview shader path.
 - Rewrote the EGL environment helper with explicit display/config/context/surface ownership checks and safer surface replacement cleanup.
+- Rewrote the camera FBO render helpers with project-owned matrix/FBO management and explicit framebuffer cleanup on render release.
 
 ## Bundled Native Components
 
