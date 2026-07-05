@@ -38,6 +38,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Added allocation and null-cleanup checks to UVC device discovery, descriptor fetch, camera open, and multi-device list construction paths.
 - Removed unused AUSBC demo surfaces: pusher APIs, the old single-camera client, fragment/dialog demo bases, demo resources, recording/streaming/image-capture APIs, raw preview callback/FBO readback support, render effects, capture widgets, media helper code, render event bus, Activity stack/crash utility framework, and legacy Camera1/Camera2/strategy abstractions that are not used by this app's USB preview flow.
 - Narrowed the preview host surface to the TextureView/OpenGL path used by this app and removed unused SurfaceView/GLSurfaceView render-mode selection code.
+- Removed unused app demo theme resources and trimmed unused AUSBC utility helpers that were not referenced by the USB camera preview flow.
 
 ## Bundled Native Components
 
