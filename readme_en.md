@@ -11,7 +11,7 @@ This project is based on the AUSBC / AndroidUSBCamera stack and adds a focused a
 - Supports switching between multiple connected cameras.
 - Separate settings page for camera, resolution, format, FPS, and camera audio playback status.
 - Settings are saved automatically and applied when returning to preview.
-- Camera audio playback control is kept, but this clean source release does not bundle the prebuilt UAC audio native library. If device audio is unavailable, the app reports it instead of falling back to the phone microphone.
+- Camera audio playback can route supported USB camera UAC audio to the phone speaker.
 - Hidden preview controls: controls fade out after inactivity and reappear when tapping the preview.
 - Preview display modes:
   - Initial contain mode: preserves camera aspect ratio and shows the full frame.
@@ -30,7 +30,7 @@ This project is based on the AUSBC / AndroidUSBCamera stack and adds a focused a
 
 ## Audio Support Status
 
-To avoid shipping a UAC audio binary without source, the GitHub source release currently focuses on USB camera video preview. The audio playback switch remains in the settings page; when no source-built UAC audio implementation is available, the app reports device audio as unavailable and does not play the phone microphone as a substitute.
+The settings page can enable USB camera audio playback through the phone speaker. The current GitHub build includes the `arm64-v8a` `libUACAudio.so` bridge, so audio playback is mainly intended for arm64 Android phones and UAC-compatible cameras. If the camera has no USB audio interface or the device is incompatible, video preview continues and audio playback is skipped.
 
 Example `local.properties`:
 

@@ -12,7 +12,8 @@ data class CameraSettings(
     val width: Int = 1280,
     val height: Int = 720,
     val format: CameraRequest.PreviewFormat = CameraRequest.PreviewFormat.FORMAT_MJPEG,
-    val maxFps: Int = 30
+    val maxFps: Int = 30,
+    val playAudio: Boolean = false
 )
 
 object CameraSettingsStore {
@@ -24,6 +25,7 @@ object CameraSettingsStore {
     private const val KEY_HEIGHT = "height"
     private const val KEY_FORMAT = "format"
     private const val KEY_MAX_FPS = "max_fps"
+    private const val KEY_PLAY_AUDIO = "play_audio"
     private const val KEY_PREVIEW_SIZES = "preview_sizes"
 
     fun load(context: Context): CameraSettings {
@@ -40,7 +42,8 @@ object CameraSettingsStore {
                         ?: CameraRequest.PreviewFormat.FORMAT_MJPEG.name
                 )
             }.getOrDefault(CameraRequest.PreviewFormat.FORMAT_MJPEG),
-            maxFps = prefs.getInt(KEY_MAX_FPS, 30)
+            maxFps = prefs.getInt(KEY_MAX_FPS, 30),
+            playAudio = prefs.getBoolean(KEY_PLAY_AUDIO, false)
         )
     }
 
@@ -53,6 +56,7 @@ object CameraSettingsStore {
             .putInt(KEY_HEIGHT, settings.height)
             .putString(KEY_FORMAT, settings.format.name)
             .putInt(KEY_MAX_FPS, settings.maxFps)
+            .putBoolean(KEY_PLAY_AUDIO, settings.playAudio)
             .apply()
     }
 

@@ -10,6 +10,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.Spinner
+import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.jiangdg.ausbc.camera.bean.CameraRequest
@@ -20,6 +21,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var resolutionSpinner: Spinner
     private lateinit var formatSpinner: Spinner
     private lateinit var fpsText: TextView
+    private lateinit var audioSwitch: Switch
 
     private val fpsOptions = intArrayOf(15, 24, 30, 45, 60, 120)
     private var devices = emptyList<UsbDevice>()
@@ -35,6 +37,7 @@ class SettingsActivity : AppCompatActivity() {
         resolutionSpinner = findViewById(R.id.resolutionSpinner)
         formatSpinner = findViewById(R.id.formatSpinner)
         fpsText = findViewById(R.id.fpsText)
+        audioSwitch = findViewById(R.id.audioSwitch)
 
         findViewById<Button>(R.id.backButton).setOnClickListener { finish() }
         settings = CameraSettingsStore.load(this)
@@ -56,6 +59,7 @@ class SettingsActivity : AppCompatActivity() {
         bindResolutionSpinner()
         bindFormatSpinner()
         bindFpsSeek()
+        bindAudioSwitch()
         bindingUi = false
     }
 
@@ -145,6 +149,15 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
         })
+    }
+
+    private fun bindAudioSwitch() {
+        audioSwitch.isChecked = settings.playAudio
+        audioSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (bindingUi) return@setOnCheckedChangeListener
+            settings = settings.copy(playAudio = isChecked)
+            CameraSettingsStore.save(this@SettingsActivity, settings)
+        }
     }
 
     private fun updateFpsText(fps: Int) {

@@ -171,6 +171,7 @@ class MainActivity : CameraActivity() {
             .setDefaultRotateType(RotateType.ANGLE_0)
             .setPreviewFormat(settings.format)
             .setPreviewFpsRange(1, settings.maxFps)
+            .setPlayCameraAudio(settings.playAudio)
             .setAspectRatioShow(false)
             .create()
     }
@@ -201,6 +202,11 @@ class MainActivity : CameraActivity() {
 
     private fun applySettings(newSettings: CameraSettings) {
         settings = newSettings
+        if (settings.playAudio && !hasAudioPermission()) {
+            statusText.text = "需要麥克風權限才能播放 USB camera 聲音"
+            requestRuntimePermissions()
+            return
+        }
 
         val selectedDevice = findSelectedDevice(newSettings)
         val currentDevice = getCurrentCamera()?.getUsbDevice()
@@ -213,7 +219,11 @@ class MainActivity : CameraActivity() {
         val camera = getCurrentCamera()
         val request = camera?.getCameraRequest()
         val needsReopen = request != null &&
-            (request.previewFormat != newSettings.format || request.previewMaxFps != newSettings.maxFps)
+            (
+                request.previewFormat != newSettings.format ||
+                    request.previewMaxFps != newSettings.maxFps ||
+                    request.playCameraAudio != newSettings.playAudio
+                )
         val needsResolutionUpdate = request != null &&
             (request.previewWidth != newSettings.width || request.previewHeight != newSettings.height)
 
@@ -369,9 +379,33 @@ class MainActivity : CameraActivity() {
 
     private fun requestRuntimePermissions() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val permissions = mutableListOf<String>()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_PERMISSIONS)
+            permissions.add(Manifest.permission.CAMERA)
         }
+        if (settings.playAudio && !hasAudioPermission()) {
+            permissions.add(Manifest.permission.RECORD_AUDIO)
+        }
+        if (permissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissions.toTypedArray(), REQUEST_PERMISSIONS)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQUEST_PERMISSIONS) return
+        if (settings.playAudio && hasAudioPermission()) {
+            reopenCameraAfterSettingsChange()
+        }
+    }
+
+    private fun hasAudioPermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
 
     private companion object {

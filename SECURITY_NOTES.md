@@ -10,7 +10,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 - Removed the unused LAME/MP3 native encoder path from `libnative`, then removed the now-unused recording/streaming surface from the app library.
 - Removed the remaining YUV JNI helper and later removed the unused Kotlin YUV compatibility helper after the H.264/raw-capture path was deleted.
 - Replaced the UVC parameter JSON writer with a local implementation and removed bundled RapidJSON sources.
-- Removed the prebuilt `libUACAudio.so` binaries and the unused UAC Java/Kotlin playback pipeline because no matching source implementation is bundled. The app no longer exposes the dead camera-audio setting or requests `RECORD_AUDIO`.
+- Restored camera-audio playback with a narrow UAC-to-`AudioTrack` path and the arm64 `libUACAudio.so` bridge so supported USB camera microphones can play through the phone speaker.
 - Removed the unused prebuilt `libuvc-3.2.9.aar`; the app now builds the active UVC camera libraries from the checked-in native source tree.
 - Pruned unused third-party native docs, examples, tests, IDE projects, generated docs, desktop packaging files, and test images that are not referenced by the Android NDK build.
 - Removed unreferenced native `_original` backup sources and Android makefile copies that were not part of the active NDK build.
@@ -73,7 +73,7 @@ This project currently keeps a small Android app layer on top of legacy USB came
 | libjpeg-turbo | `libuvc/src/main/jni/libjpeg-turbo-1.5.0` | 1.5.0 | Old JPEG decoder code; NVD lists historical crafted-input issues such as CVE-2018-14498 for libjpeg-turbo through 1.5.90. | Prefer Android platform decoding or upgrade to a current libjpeg-turbo release if MJPEG native decode remains needed. |
 | RapidJSON | removed | not bundled | Formerly used only for native UVC parameter JSON serialization. | Keep the local writer limited to generated camera metadata; use a maintained parser if untrusted JSON input is added later. |
 | libnative | removed | not bundled | Former MP3/LAME and YUV JNI helpers are no longer shipped. | Reintroduce native helpers only with source, licensing notes, and a measured need. |
-| UAC audio native binary | removed | not bundled | Formerly shipped only as `libUACAudio.so` without corresponding source in this repository. | Reintroduce camera audio only with a source-built UAC implementation or a clearly documented, licensed binary distribution. |
+| UAC audio native binary | `libuvc/src/main/jniLibs/arm64-v8a/libUACAudio.so` | prebuilt arm64 bridge | Shipped without matching native source in this repository; required for restored USB camera audio playback on supported arm64 phones. | Prefer replacing this with a source-built UAC implementation; keep the binary documented while it remains necessary for the feature. |
 | libuvc AAR | removed | not bundled | Former `libuvc-3.2.9.aar` was an unused prebuilt package. | Keep distribution source-first; rebuild release artifacts from source instead of committing AAR outputs. |
 
 ## Current Release Stance

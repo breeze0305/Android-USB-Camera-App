@@ -57,7 +57,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:text="解析度"
+                android:text="畫質 / 解析度"
                 android:textColor="#202124"
                 android:textSize="13sp" />
 
@@ -84,7 +84,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:text="FPS 上限：30"
+                android:text="FPS 上限: 30"
                 android:textColor="#202124"
                 android:textSize="13sp" />
 
@@ -94,6 +94,15 @@
                 android:layout_height="46dp"
                 android:max="5"
                 android:progress="2" />
+
+            <Switch
+                android:id="@+id/audioSwitch"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="8dp"
+                android:text="播放 camera 聲音到喇叭"
+                android:textColor="#202124"
+                android:textSize="15sp" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
