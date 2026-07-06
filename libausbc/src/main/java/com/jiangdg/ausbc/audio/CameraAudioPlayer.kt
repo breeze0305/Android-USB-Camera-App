@@ -22,10 +22,19 @@ class CameraAudioPlayer(
 
     fun stop() {
         running.set(false)
-        audioThread?.interrupt()
-        audioThread = null
-        releaseOutput()
-        source.release()
+        val thread = audioThread
+        thread?.interrupt()
+        if (thread != null && thread != Thread.currentThread()) {
+            try {
+                thread.join(STOP_JOIN_TIMEOUT_MS)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                Logger.w(TAG, "wait for camera audio stop interrupted", e)
+            }
+        }
+        if (audioThread === thread) {
+            audioThread = null
+        }
     }
 
     private fun runPlayback() {
@@ -63,6 +72,7 @@ class CameraAudioPlayer(
             running.set(false)
             releaseOutput()
             source.release()
+            audioThread = null
         }
     }
 
@@ -87,5 +97,6 @@ class CameraAudioPlayer(
     private companion object {
         private const val TAG = "CameraAudioPlayer"
         private const val AUDIO_THREAD_NAME = "usb-camera-audio"
+        private const val STOP_JOIN_TIMEOUT_MS = 1500L
     }
 }
