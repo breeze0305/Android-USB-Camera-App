@@ -12,6 +12,7 @@ class CameraRequest private constructor() {
     var previewFormat: PreviewFormat = PreviewFormat.FORMAT_MJPEG
     var previewMinFps: Int = DEFAULT_MIN_FPS
     var previewMaxFps: Int = DEFAULT_MAX_FPS
+    var playCameraAudio: Boolean = false
 
     class Builder {
         private val request = CameraRequest()
@@ -39,6 +40,10 @@ class CameraRequest private constructor() {
         fun setPreviewFpsRange(minFps: Int, maxFps: Int): Builder = apply {
             request.previewMinFps = minFps.coerceAtLeast(1)
             request.previewMaxFps = maxFps.coerceAtLeast(request.previewMinFps)
+        }
+
+        fun setPlayCameraAudio(enabled: Boolean): Builder = apply {
+            request.playCameraAudio = enabled
         }
 
         fun create(): CameraRequest = request

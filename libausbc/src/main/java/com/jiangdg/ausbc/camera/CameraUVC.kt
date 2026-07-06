@@ -5,6 +5,8 @@ import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbDevice
 import android.view.TextureView
 import com.jiangdg.ausbc.MultiCameraClient
+import com.jiangdg.ausbc.audio.CameraAudioPlayer
+import com.jiangdg.ausbc.audio.UsbCameraAudioSource
 import com.jiangdg.ausbc.callback.ICameraStateCallBack
 import com.jiangdg.ausbc.camera.bean.CameraRequest
 import com.jiangdg.ausbc.camera.bean.PreviewSize
@@ -16,6 +18,7 @@ import com.jiangdg.utils.Size
 
 class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx, device) {
     private var mUvcCamera: UVCCamera? = null
+    private var cameraAudioPlayer: CameraAudioPlayer? = null
     private val cachedPreviewSizes = arrayListOf<PreviewSize>()
 
     override fun getAllPreviewSizes(aspectRatio: Double?): MutableList<PreviewSize> {
@@ -76,6 +79,7 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
         }
 
         isPreviewed = true
+        startCameraAudioIfNeeded(request)
         postStateEvent(ICameraStateCallBack.State.OPENED)
         if (Utils.debugCamera) {
             Logger.i(TAG, "start preview, name = ${device.deviceName}, preview=$previewSize")
@@ -85,6 +89,7 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
     override fun closeCameraInternal() {
         postStateEvent(ICameraStateCallBack.State.CLOSED)
         isPreviewed = false
+        stopCameraAudio()
         mUvcCamera?.destroy()
         mUvcCamera = null
         if (Utils.debugCamera) {
@@ -160,6 +165,31 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
             is TextureView -> cameraView.surfaceTexture
             else -> null
         }
+    }
+
+    private fun startCameraAudioIfNeeded(request: CameraRequest) {
+        if (!request.playCameraAudio) return
+        val ctrlBlock = mCtrlBlock ?: run {
+            Logger.w(TAG, "camera audio skipped: missing USB control block")
+            return
+        }
+        if (!CameraUtils.isCameraContainsMic(device)) {
+            Logger.w(TAG, "camera audio skipped: USB device has no audio interface")
+            return
+        }
+        val source = UsbCameraAudioSource(ctrlBlock)
+        if (!source.isAvailable) {
+            Logger.w(TAG, "camera audio skipped: UAC native library is unavailable")
+            return
+        }
+        cameraAudioPlayer = CameraAudioPlayer(source) { message ->
+            Logger.w(TAG, "camera audio playback failed: $message")
+        }.also { it.start() }
+    }
+
+    private fun stopCameraAudio() {
+        cameraAudioPlayer?.stop()
+        cameraAudioPlayer = null
     }
 
     private fun failOpen(message: String) {

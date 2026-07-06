@@ -29,6 +29,13 @@ object CameraUtils {
         }
     }
 
+    fun isCameraContainsMic(device: UsbDevice?): Boolean {
+        device ?: return false
+        return (0 until device.interfaceCount).any { index ->
+            device.getInterface(index).interfaceClass == UsbConstants.USB_CLASS_AUDIO
+        }
+    }
+
     fun hasCameraPermission(ctx: Context): Boolean =
         ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 }
