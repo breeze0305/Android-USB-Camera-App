@@ -98,7 +98,7 @@ adb shell am start -n com.breeze.usbcamera/.MainActivity
 
 ```text
 app/        Android app 主程式
-libausbc/   AUSBC camera wrapper 與 OpenGL render 層
+libausbc/   Camera 控制與 OpenGL render 層
 libuvc/     UVC camera native 支援
 gradle/     Gradle wrapper
 ```
@@ -109,4 +109,4 @@ gradle/     Gradle wrapper
 
 ## 授權
 
-本專案基於 AndroidUSBCamera / AUSBC 相關技術整理與改作，依照專案內授權檔案與 Apache-2.0 License 條款使用。
+本專案依照 Apache-2.0 License 條款發布，詳細內容請參考專案內授權檔案。

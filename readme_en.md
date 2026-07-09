@@ -2,8 +2,6 @@
 
 Android app for previewing a USB UVC camera connected through the phone USB-C charging port.
 
-This project is based on the AUSBC / AndroidUSBCamera stack and adds a focused app experience for phone-side USB camera monitoring.
-
 ## Features
 
 - Preview USB UVC camera video on an Android phone.
@@ -72,7 +70,7 @@ adb shell am start -n com.breeze.usbcamera/.MainActivity
 
 ```text
 app/        Main Android application
-libausbc/   AUSBC camera wrapper and rendering layer
+libausbc/   Camera control and rendering layer
 libuvc/     Native UVC camera support
 gradle/     Gradle wrapper files
 ```
@@ -93,4 +91,4 @@ Do not commit generated APK/AAB files. Build them locally or through CI when nee
 
 ## License
 
-This project includes code derived from AndroidUSBCamera / AUSBC and keeps the original Apache-2.0 license file.
+This project is distributed under the Apache-2.0 License. See the license file in this repository for details.
