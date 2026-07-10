@@ -1,51 +1,79 @@
 # USB Camera Monitor
 
-Android app for previewing a USB UVC camera connected through the phone USB-C charging port.
+USB Camera Monitor is an Android USB camera preview app. It can read a UVC camera connected through the phone USB-C / OTG charging port and display the camera feed on the phone.
+
+[中文 README](README.md)
 
 ## Features
 
-- Preview USB UVC camera video on an Android phone.
-- Automatically detects attached USB camera devices.
-- Supports switching between multiple connected cameras.
-- Separate settings page for camera, resolution, format, FPS, and camera audio playback status.
-- Settings are saved automatically and applied when returning to preview.
-- Camera audio playback can route supported USB camera UAC audio to the phone speaker.
-- Hidden preview controls: controls fade out after inactivity and reappear when tapping the preview.
-- Preview display modes:
-  - Initial contain mode: preserves camera aspect ratio and shows the full frame.
-  - Stretch mode: fills the full screen without preserving aspect ratio.
-  - Cover mode: preserves aspect ratio and crops to cover the full screen.
-- Pinch to zoom and one-finger drag on preview.
-- Reset button to return to the initial display state.
-- Rotation handling keeps preview alive and re-syncs render size after orientation changes.
+- Preview the UVC camera feed from a USB-C / OTG connection.
+- Automatically detects connected USB cameras.
+- Supports switching between multiple USB cameras.
+- Separate settings page for:
+  - Camera device
+  - Resolution
+  - MJPEG / YUYV format
+  - FPS range
+  - Camera audio playback through the phone speaker
+- Settings are saved automatically and applied when returning from the settings page.
+- Preview controls hide automatically after inactivity and reappear when tapping the preview.
+- Supports three display modes:
+  - Initial display mode: preserves the camera aspect ratio and shows the full frame.
+  - Forced fullscreen stretch mode: fills the entire screen without preserving aspect ratio.
+  - Aspect-ratio fullscreen cover mode: preserves aspect ratio and scales up until the screen is covered.
+- Supports pinch-to-zoom and one-finger drag on the preview.
+- Supports reset back to the initial display state.
+- Keeps the preview flow stable during phone rotation and avoids restarting the camera due to rotation.
 
 ## Requirements
 
-- Android phone with USB OTG / USB host support.
+- Android phone with USB OTG / USB Host support.
 - UVC-compatible USB camera.
-- Android SDK and Gradle environment.
-- Android NDK configured through `local.properties`.
+- USB-C adapter or USB hub.
+- Android 4.4 or later.
 
-## Audio Support Status
+## Installation
 
-The settings page can enable USB camera audio playback through the phone speaker. The current GitHub build includes the `arm64-v8a` `libUACAudio.so` bridge, so audio playback is mainly intended for arm64 Android phones and UAC-compatible cameras. If the camera has no USB audio interface or the device is incompatible, video preview continues and audio playback is skipped.
+Download the latest APK from [GitHub Releases](https://github.com/breeze0305/Android-USB-Camera-App/releases), then install it on your Android phone.
 
-Example `local.properties`:
+If the phone shows an "unknown source" or "unknown app" warning, follow the Android system prompt to allow installation.
+
+## Sponsorship
+
+This app stays ad-free. If you find it useful, sponsorship is welcome and helps support development.
+
+<a href="https://p.ecpay.com.tw/ED0F9CA"><img src="https://payment.ecpay.com.tw/Upload/QRCode/202304/QRCode_6eefa1d4-cfe8-4dc3-a344-37455453a7a3.png" alt="Sponsor QR Code" width="180"></a>
+
+[Go to sponsor page](https://p.ecpay.com.tw/ED0F9CA)
+
+## Camera Audio Status
+
+The settings page can enable "play camera audio to speaker". When enabled, the app tries to read the USB camera UAC audio interface and play it through the phone speaker.
+
+The current GitHub version includes the `arm64-v8a` `libUACAudio.so`, so it mainly supports arm64 Android phones. If the camera does not have a UAC audio interface, or if the phone / camera is incompatible, the app keeps video preview running and skips audio playback.
+
+## Development Environment
+
+- Android Studio and Android SDK.
+- Android NDK.
+- Gradle Wrapper is included in this repository.
+
+Before the first build, create `local.properties` and adjust the Android SDK / NDK paths for your machine:
 
 ```properties
 sdk.dir=C\:\\Users\\your_name\\AppData\\Local\\Android\\Sdk
 ndk.dir=C\:\\Users\\your_name\\AppData\\Local\\Android\\Sdk\\ndk\\21.1.6352462
 ```
 
-`local.properties` is intentionally ignored by Git because it is machine-specific.
+`local.properties` is a local environment file, is already included in `.gitignore`, and should not be committed to GitHub.
 
-## Build
+## Build Debug APK
 
 ```powershell
 .\gradlew.bat assembleDebug
 ```
 
-Debug APK output:
+APK output path:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
@@ -60,7 +88,7 @@ adb devices
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Launch manually from the phone, or with:
+You can also launch the app with adb:
 
 ```powershell
 adb shell am start -n com.breeze.usbcamera/.MainActivity
@@ -70,24 +98,14 @@ adb shell am start -n com.breeze.usbcamera/.MainActivity
 
 ```text
 app/        Main Android application
-libausbc/   Camera control and rendering layer
+libausbc/   Camera control and OpenGL render layer
 libuvc/     Native UVC camera support
-gradle/     Gradle wrapper files
+gradle/     Gradle wrapper
 ```
 
-## Git Notes
+## Security And Maintenance Notes
 
-The repository intentionally ignores local build outputs and machine-specific files:
-
-- `local.properties`
-- `.gradle/`
-- `build/`
-- `app/build/`
-- `app/release/`
-- `*.apk`
-- `*.aab`
-
-Do not commit generated APK/AAB files. Build them locally or through CI when needed.
+This project has cleaned up a large amount of unused legacy code and unimplemented flows, but it still contains a USB camera native stack. See [SECURITY_NOTES.md](SECURITY_NOTES.md) for detailed risks and cleanup notes.
 
 ## License
 
